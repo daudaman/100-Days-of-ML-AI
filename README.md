@@ -82,4 +82,8 @@ Instead of only studying theory, I believe in applying concepts through practica
 
 Feel free to explore the projects, provide feedback, or connect with me as I continue this journey.
 
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Daud%20Aman-blue?logo=linkedin)](https://www.linkedin.com/in/daud-aman-041387350/)
+
+📧 Email: daudaman22@gmail.com
+
 Thank you for visiting this repository.
