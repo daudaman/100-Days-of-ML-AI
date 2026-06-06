@@ -1,4 +1,4 @@
-# 100 Days of Machine Learning & AI
+# 100 Days of Machine Learning & Artificial Intelligence
 
 Welcome to my Machine Learning and Artificial Intelligence journey.
 
