@@ -73,7 +73,7 @@ Instead of only studying theory, I believe in applying concepts through practica
 
 ## Progress
 
-- Completed: 2/100 Projects
+- Completed: 3/100 Projects
 - Current Focus: Machine Learning Fundamentals
 
 ---
