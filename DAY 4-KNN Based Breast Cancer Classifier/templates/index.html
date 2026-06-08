@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KNN Breast Cancer Classifier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c12;
+      --surface: #0d1117;
+      --card: #111820;
+      --border: #1e2d3d;
+      --cyan: #22d3ee;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --text: #e2e8f0;
+      --muted: #8b9ab0;
+      --success-bg: #022c22;
+      --danger-bg: #2d0d0d;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: linear-gradient(90deg, #080c12 0%, #0d1520 100%);
+    }
+    .logo-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+    header h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: .05em; }
+    header span { color: var(--cyan); }
+    .badge {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .7rem;
+      border: 1px solid var(--border);
+      padding: .25rem .6rem;
+      border-radius: 4px;
+      color: var(--muted);
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+    .hero {
+      text-align: center;
+      padding: 3rem 0 2rem;
+    }
+    .hero h2 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: .75rem;
+    }
+    .hero p { color: var(--muted); font-size: 1rem; max-width: 500px; margin: 0 auto; }
+
+    /* ── Result Box ── */
+    #result-box {
+      display: none;
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 2rem 0;
+      border: 1px solid var(--border);
+      animation: fadeIn .4s ease;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-8px);} to{opacity:1;transform:none;} }
+    #result-box.benign  { background: var(--success-bg); border-color: var(--cyan); }
+    #result-box.malignant { background: var(--danger-bg); border-color: var(--red); }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .result-icon { font-size: 2.5rem; }
+    .result-label { font-size: 2rem; font-weight: 800; }
+    .result-label.benign { color: var(--cyan); }
+    .result-label.malignant { color: var(--red); }
+    .result-conf { font-family: 'JetBrains Mono', monospace; color: var(--muted); font-size: .9rem; }
+
+    .prob-bars { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .prob-item { flex: 1; min-width: 160px; }
+    .prob-label { font-size: .8rem; color: var(--muted); margin-bottom: .4rem; display: flex; justify-content: space-between; }
+    .prob-track { background: var(--border); border-radius: 99px; height: 8px; overflow: hidden; }
+    .prob-fill { height: 100%; border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+    .prob-fill.benign-fill  { background: var(--cyan); }
+    .prob-fill.malignant-fill { background: var(--red); }
+
+    /* ── Feature Grid ── */
+    .section-title {
+      font-size: .7rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: .5rem;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      transition: border-color .2s;
+    }
+    .feature-card:hover { border-color: #2d4a6b; }
+
+    .feature-name {
+      font-size: .7rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      margin-bottom: .5rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .feature-card input[type=number] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .45rem .6rem;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .85rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .feature-card input:focus { border-color: var(--cyan); }
+    .feature-range {
+      display: flex;
+      justify-content: space-between;
+      font-size: .65rem;
+      color: #4a5568;
+      margin-top: .35rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Submit ── */
+    .submit-row { text-align: center; margin: 2.5rem 0; }
+    button[type=submit] {
+      background: linear-gradient(135deg, var(--cyan), #0ea5e9);
+      color: #080c12;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: .06em;
+      border: none;
+      padding: .9rem 3rem;
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform .15s, box-shadow .15s;
+    }
+    button[type=submit]:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(34,211,238,.25);
+    }
+    button[type=submit]:active { transform: translateY(0); }
+    button[type=submit].loading { opacity: .7; pointer-events: none; }
+
+    .reset-btn {
+      margin-left: 1rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: .9rem;
+      padding: .9rem 2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    .reset-btn:hover { border-color: var(--muted); color: var(--text); }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: .8rem;
+      border-top: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    #error-msg {
+      display: none;
+      background: #2d0d0d;
+      border: 1px solid var(--red);
+      color: var(--red);
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .85rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-dot"></div>
+  <h1>KNN <span>Cancer</span> Classifier</h1>
+  <div class="badge">K-Nearest Neighbors · sklearn</div>
+</header>
+
+<div class="container">
+  <div class="hero">
+    <h2>Breast Cancer<br>Prediction Tool</h2>
+    <p>Enter tumor feature measurements below. The model will predict whether the tumor is <strong>Benign</strong> or <strong>Malignant</strong>.</p>
+  </div>
+
+  <div id="error-msg"></div>
+
+  <div id="result-box">
+    <div class="result-header">
+      <div class="result-icon" id="res-icon"></div>
+      <div>
+        <div class="result-label" id="res-label"></div>
+        <div class="result-conf" id="res-conf"></div>
+      </div>
+    </div>
+    <div class="prob-bars">
+      <div class="prob-item">
+        <div class="prob-label">
+          <span>Malignant</span>
+          <span id="mal-pct">—</span>
+        </div>
+        <div class="prob-track"><div class="prob-fill malignant-fill" id="mal-bar" style="width:0%"></div></div>
+      </div>
+      <div class="prob-item">
+        <div class="prob-label">
+          <span>Benign</span>
+          <span id="ben-pct">—</span>
+        </div>
+        <div class="prob-track"><div class="prob-fill benign-fill" id="ben-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <form id="predict-form">
+    <div class="section-title">// tumor features — 30 measurements</div>
+    <div class="feature-grid">
+      {% for f in features %}
+      <div class="feature-card">
+        <div class="feature-name">{{ f.name }}</div>
+        <input
+          type="number"
+          name="{{ f.name }}"
+          value="{{ '%.4g' % f.mean }}"
+          step="any"
+          min="{{ '%.4g' % f.min }}"
+          max="{{ '%.4g' % f.max }}"
+        />
+        <div class="feature-range">
+          <span>min {{ '%.4g' % f.min }}</span>
+          <span>max {{ '%.4g' % f.max }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="submit-row">
+      <button type="submit" id="submit-btn">⬡ &nbsp;Run Prediction</button>
+      <button type="button" class="reset-btn" onclick="resetForm()">Reset to Defaults</button>
+    </div>
+  </form>
+</div>
+
+<footer>
+</footer>
+
+<script>
+  const form = document.getElementById('predict-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const resultBox = document.getElementById('result-box');
+  const errorMsg = document.getElementById('error-msg');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitBtn.textContent = '⟳  Predicting…';
+    submitBtn.classList.add('loading');
+    errorMsg.style.display = 'none';
+    resultBox.style.display = 'none';
+
+    const fd = new FormData(form);
+    try {
+      const res = await fetch('/predict', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (data.error) {
+        errorMsg.textContent = '⚠  ' + data.error;
+        errorMsg.style.display = 'block';
+      } else {
+        const isBenign = data.prediction === 'Benign';
+        resultBox.className = isBenign ? 'benign' : 'malignant';
+        resultBox.style.display = 'block';
+        document.getElementById('res-icon').textContent = isBenign ? '✓' : '⚠';
+        const lbl = document.getElementById('res-label');
+        lbl.textContent = data.prediction;
+        lbl.className = 'result-label ' + (isBenign ? 'benign' : 'malignant');
+        document.getElementById('res-conf').textContent = `Confidence: ${data.confidence}%`;
+        document.getElementById('mal-pct').textContent = data.malignant_prob + '%';
+        document.getElementById('ben-pct').textContent = data.benign_prob + '%';
+        setTimeout(() => {
+          document.getElementById('mal-bar').style.width = data.malignant_prob + '%';
+          document.getElementById('ben-bar').style.width = data.benign_prob + '%';
+        }, 50);
+        resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch (err) {
+      errorMsg.textContent = '⚠  Network error. Is the Flask server running?';
+      errorMsg.style.display = 'block';
+    }
+    submitBtn.textContent = '⬡  Run Prediction';
+    submitBtn.classList.remove('loading');
+  });
+
+  function resetForm() {
+    form.reset();
+    resultBox.style.display = 'none';
+    errorMsg.style.display = 'none';
+  }
+</script>
+</body>
+</html>
