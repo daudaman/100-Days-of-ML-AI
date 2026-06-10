@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heart Disease Predictor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    color: white; padding: 28px 20px; text-align: center;
+  }
+  header h1 { font-size: 2rem; margin-bottom: 6px; }
+  header p  { opacity: .85; font-size: .95rem; }
+
+  .container { max-width: 780px; margin: 36px auto; padding: 0 16px; }
+
+  .card {
+    background: white; border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.08); padding: 32px;
+  }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media(max-width:560px){ .grid{ grid-template-columns:1fr; } }
+
+  .field label  { display:block; font-size:.82rem; font-weight:600;
+                  color:#555; margin-bottom:5px; }
+  .field input  { width:100%; padding:10px 12px; border:1.5px solid #dde3eb;
+                  border-radius:8px; font-size:.95rem; transition:border .2s; }
+  .field input:focus { outline:none; border-color:#e74c3c; }
+
+  .btn-wrap { margin-top:26px; text-align:center; }
+  button {
+    background:linear-gradient(135deg,#c0392b,#e74c3c);
+    color:white; border:none; padding:13px 44px; border-radius:50px;
+    font-size:1rem; font-weight:600; cursor:pointer; transition:transform .15s;
+  }
+  button:hover { transform:scale(1.04); }
+
+  .result {
+    margin-top:28px; padding:20px 24px; border-radius:12px;
+    text-align:center; font-size:1.15rem; font-weight:700;
+  }
+  .result.success { background:#eafaf1; color:#1e8449; border:2px solid #a9dfbf; }
+  .result.danger  { background:#fdedec; color:#c0392b; border:2px solid #f1948a; }
+  .result .conf   { font-size:.85rem; font-weight:400; margin-top:6px; color:#777; }
+
+  .error { background:#fff3cd; border:1px solid #ffc107; padding:12px 16px;
+           border-radius:8px; color:#856404; margin-top:20px; }
+
+  h2 { font-size:1.1rem; color:#444; margin-bottom:20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Heart Disease Predictor</h1>
+  <p>Decision Tree Classifier — Day 5 ML Project</p>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h2>Enter Patient Medical Data</h2>
+    <form method="POST">
+      <div class="grid">
+        {% for f in fields %}
+        {% set m = meta[f] %}
+        <div class="field">
+          <label for="{{ f }}">{{ m.label }}</label>
+          <input type="{{ m.type }}" id="{{ f }}" name="{{ f }}"
+                 min="{{ m.min }}" max="{{ m.max }}" step="{{ m.step }}"
+                 placeholder="{{ m.placeholder }}"
+                 value="{{ values.get(f, '') }}" required>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="btn-wrap">
+        <button type="submit"> Predict</button>
+      </div>
+    </form>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    {% if prediction %}
+    <div class="result {{ prediction.class }}">
+      {{ prediction.label }}
+      <div class="conf">Model confidence: {{ prediction.confidence }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+</body>
+</html>
