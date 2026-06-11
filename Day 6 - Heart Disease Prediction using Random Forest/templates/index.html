@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Heart Disease Predictor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0D1117;
+    --surface:  #161B22;
+    --border:   #30363D;
+    --text:     #C9D1D9;
+    --muted:    #8B949E;
+    --green:    #3FB950;
+    --red:      #F85149;
+    --blue:     #388BFD;
+    --accent:   #58A6FF;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  header h1 {
+    font-size: 2rem;
+    color: #E6EDF3;
+    letter-spacing: -0.5px;
+  }
+  header p {
+    color: var(--muted);
+    margin-top: 6px;
+    font-size: 0.9rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    width: 100%;
+    max-width: 680px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  input {
+    width: 100%;
+    background: #0D1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 9px 12px;
+    transition: border-color .2s;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+
+  .hint {
+    font-size: 0.7rem;
+    color: #484F58;
+    margin-top: 3px;
+  }
+
+  button {
+    margin-top: 24px;
+    width: 100%;
+    padding: 12px;
+    background: var(--blue);
+    color: #fff;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: opacity .2s;
+  }
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  #result {
+    margin-top: 28px;
+    display: none;
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    border-width: 1px;
+    border-style: solid;
+  }
+  #result.positive {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: var(--red);
+  }
+  #result.negative {
+    background: rgba(63, 185, 80, 0.1);
+    border-color: var(--green);
+  }
+  #result .label {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  #result.positive .label { color: var(--red); }
+  #result.negative .label { color: var(--green); }
+  #result .meta {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .bar-wrap {
+    background: #21262D;
+    border-radius: 999px;
+    height: 8px;
+    width: 80%;
+    margin: 12px auto 4px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width .6s ease;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1> Heart Disease Predictor</h1>
+  <p>Random Forest Classifier · Day 6 Project</p>
+</header>
+
+<div class="card">
+  <div class="grid" id="inputs">
+    <div>
+      <label>Age</label>
+      <input type="number" name="age" placeholder="e.g. 54" min="1" max="120" />
+    </div>
+    <div>
+      <label>Sex</label>
+      <input type="number" name="sex" placeholder="0 = Female, 1 = Male" min="0" max="1" />
+    </div>
+    <div>
+      <label>Chest Pain Type (cp)</label>
+      <input type="number" name="cp" placeholder="0–3" min="0" max="3" />
+      <div class="hint">0=typical, 1=atypical, 2=non-anginal, 3=asymptomatic</div>
+    </div>
+    <div>
+      <label>Resting BP (trestbps)</label>
+      <input type="number" name="trestbps" placeholder="e.g. 130" />
+    </div>
+    <div>
+      <label>Cholesterol (chol)</label>
+      <input type="number" name="chol" placeholder="e.g. 250" />
+    </div>
+    <div>
+      <label>Fasting Blood Sugar (fbs)</label>
+      <input type="number" name="fbs" placeholder="0 or 1 (>120 mg/dl)" min="0" max="1" />
+    </div>
+    <div>
+      <label>Resting ECG (restecg)</label>
+      <input type="number" name="restecg" placeholder="0–2" min="0" max="2" />
+    </div>
+    <div>
+      <label>Max Heart Rate (thalach)</label>
+      <input type="number" name="thalach" placeholder="e.g. 150" />
+    </div>
+    <div>
+      <label>Exercise Angina (exang)</label>
+      <input type="number" name="exang" placeholder="0 = No, 1 = Yes" min="0" max="1" />
+    </div>
+    <div>
+      <label>ST Depression (oldpeak)</label>
+      <input type="number" name="oldpeak" placeholder="e.g. 1.5" step="0.1" />
+    </div>
+    <div>
+      <label>Slope</label>
+      <input type="number" name="slope" placeholder="0–2" min="0" max="2" />
+    </div>
+    <div>
+      <label>Major Vessels (ca)</label>
+      <input type="number" name="ca" placeholder="0–3" min="0" max="3" />
+    </div>
+    <div>
+      <label>Thal</label>
+      <input type="number" name="thal" placeholder="0–3" min="0" max="3" />
+    </div>
+  </div>
+
+  <button id="btn" onclick="predict()">Predict</button>
+
+  <div id="result">
+    <div class="label" id="result-label"></div>
+    <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
+    <div class="meta" id="result-meta"></div>
+  </div>
+</div>
+
+<script>
+const FEATURES = ["age","sex","cp","trestbps","chol","fbs","restecg",
+                  "thalach","exang","oldpeak","slope","ca","thal"];
+
+async function predict() {
+  const btn = document.getElementById("btn");
+  const data = {};
+  let ok = true;
+  FEATURES.forEach(f => {
+    const el = document.querySelector(`input[name="${f}"]`);
+    if (!el || el.value === "") { ok = false; return; }
+    data[f] = el.value;
+  });
+  if (!ok) { alert("Please fill in all fields."); return; }
+
+  btn.disabled = true;
+  btn.textContent = "Analyzing…";
+
+  try {
+    const res  = await fetch("/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    showResult(json);
+  } catch(e) {
+    alert("Error: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Predict";
+  }
+}
+
+function showResult(json) {
+  const box  = document.getElementById("result");
+  const lbl  = document.getElementById("result-label");
+  const meta = document.getElementById("result-meta");
+  const bar  = document.getElementById("bar");
+
+  box.style.display = "block";
+  box.className = json.prediction === 1 ? "positive" : "negative";
+  lbl.textContent  = json.prediction === 1 ? " Heart Disease Detected" : "  No Heart Disease";
+  meta.textContent = `Risk Score: ${json.risk_score}%  ·  Model Confidence: ${json.confidence}%`;
+
+  const color = json.prediction === 1 ? "#F85149" : "#3FB950";
+  bar.style.background = color;
+  bar.style.width = "0%";
+  setTimeout(() => { bar.style.width = json.risk_score + "%"; }, 50);
+
+  box.scrollIntoView({ behavior: "smooth" });
+}
+</script>
+</body>
+</html>
