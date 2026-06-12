@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spam Detector – Day 7</title>
+  <style>
+    /*  Reset & base  */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface2:    #22263a;
+      --border:      #2e3248;
+      --accent-spam: #ff4d6d;
+      --accent-ham:  #43d98d;
+      --accent-blue: #6c8fff;
+      --text:        #e8eaf6;
+      --muted:       #8891b4;
+      --radius:      14px;
+      --font-mono:   'JetBrains Mono', 'Fira Mono', 'Courier New', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    /*  Header  */
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--accent-blue);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: .35rem .9rem;
+      border-radius: 99px;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -.03em;
+      line-height: 1.15;
+      margin-bottom: .6rem;
+    }
+
+    h1 span { color: var(--accent-spam); }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: .95rem;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /*  Card  */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: .97rem;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 120px;
+      padding: .9rem 1.1rem;
+      transition: border-color .2s;
+      outline: none;
+    }
+
+    textarea:focus { border-color: var(--accent-blue); }
+    textarea::placeholder { color: var(--muted); }
+
+    /*  Examples  */
+    .examples {
+      margin: .9rem 0 1.4rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+
+    .example-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: .3rem .85rem;
+      font-size: .78rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .18s;
+      user-select: none;
+    }
+
+    .example-chip:hover {
+      border-color: var(--accent-blue);
+      color: var(--text);
+    }
+
+    /*  Button  */
+    button#analyzeBtn {
+      width: 100%;
+      padding: .85rem 1.5rem;
+      background: linear-gradient(135deg, #5b6fff 0%, #a259ff 100%);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      letter-spacing: .02em;
+      transition: opacity .2s, transform .1s;
+    }
+
+    button#analyzeBtn:hover   { opacity: .9; }
+    button#analyzeBtn:active  { transform: scale(.98); }
+    button#analyzeBtn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /*  Result  */
+    #result {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .verdict {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.1rem 1.4rem;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      margin-bottom: 1.2rem;
+    }
+
+    .verdict.spam {
+      background: rgba(255, 77, 109, .1);
+      border-color: rgba(255, 77, 109, .3);
+    }
+
+    .verdict.ham {
+      background: rgba(67, 217, 141, .1);
+      border-color: rgba(67, 217, 141, .3);
+    }
+
+    .verdict-icon { font-size: 2rem; }
+    .verdict-label { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+    .verdict-text {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+
+    .verdict.spam  .verdict-text { color: var(--accent-spam); }
+    .verdict.ham   .verdict-text { color: var(--accent-ham);  }
+
+    .verdict-conf {
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .conf-num { font-size: 1.5rem; font-weight: 800; }
+    .conf-lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+    /*  Prob bars  */
+    .prob-row { margin-bottom: .6rem; }
+    .prob-meta { display: flex; justify-content: space-between; margin-bottom: .3rem; font-size: .82rem; }
+    .prob-meta span:first-child { color: var(--muted); }
+    .prob-track {
+      background: var(--surface2);
+      border-radius: 99px;
+      height: 7px;
+      overflow: hidden;
+    }
+
+    .prob-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .6s cubic-bezier(.4,0,.2,1);
+    }
+
+    .prob-fill.spam { background: linear-gradient(90deg, #ff4d6d, #ff8fa3); }
+    .prob-fill.ham  { background: linear-gradient(90deg, #43d98d, #a8f5d5); }
+
+    /*  Stats grid ─ */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .7rem;
+      margin-top: 1.2rem;
+    }
+
+    .stat-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .85rem 1rem;
+    }
+
+    .stat-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .3rem; }
+    .stat-val   { font-size: 1.2rem; font-weight: 800; }
+
+    /*  Error  */
+    .error-box {
+      background: rgba(255, 77, 109, .1);
+      border: 1px solid rgba(255, 77, 109, .3);
+      border-radius: 10px;
+      padding: .8rem 1rem;
+      color: var(--accent-spam);
+      font-size: .9rem;
+    }
+
+    /*  Tech pills ─ */
+    .tech-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: 2rem;
+    }
+
+    .tech-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: .3rem .85rem;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+
+    /*  Spinner  */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: .45rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+      .card { padding: 1.4rem; }
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">Day 7 · ML 100 Days</div>
+    <h1>Spam <span>Detector</span></h1>
+    <p class="subtitle">Naive Bayes + TF-IDF NLP model trained on 5,572 real SMS messages.</p>
+  </header>
+
+  <div class="card">
+    <label for="msgInput">Your Message</label>
+    <textarea id="msgInput" placeholder="Paste or type any message here …" rows="5"></textarea>
+
+    <div class="examples">
+      <span class="example-chip" onclick="setExample(this)">Congratulations! You won a free iPhone, click now!</span>
+      <span class="example-chip" onclick="setExample(this)">Let's meet at 7 PM today.</span>
+      <span class="example-chip" onclick="setExample(this)">Claim your £1000 prize immediately!</span>
+      <span class="example-chip" onclick="setExample(this)">Hey, are you coming to the party tonight?</span>
+    </div>
+
+    <button id="analyzeBtn" onclick="analyze()">Analyse Message</button>
+
+    <div id="result"></div>
+  </div>
+
+  <div class="tech-row">
+    <span class="tech-pill">Python</span>
+    <span class="tech-pill">Scikit-Learn</span>
+    <span class="tech-pill">Naive Bayes</span>
+    <span class="tech-pill">TF-IDF</span>
+    <span class="tech-pill">NLTK</span>
+    <span class="tech-pill">Flask</span>
+  </div>
+
+  <script>
+    function setExample(el) {
+      document.getElementById("msgInput").value = el.textContent;
+    }
+
+    async function analyze() {
+      const msg = document.getElementById("msgInput").value.trim();
+      const btn = document.getElementById("analyzeBtn");
+      const res = document.getElementById("result");
+
+      if (!msg) {
+        res.style.display = "block";
+        res.innerHTML = `<div class="error-box">⚠️ Please enter a message before analysing.</div>`;
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span>Analysing …`;
+      res.style.display = "none";
+
+      try {
+        const resp = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: msg })
+        });
+
+        const data = await resp.json();
+
+        if (data.error) {
+          res.innerHTML = `<div class="error-box">⚠️ ${data.error}</div>`;
+          res.style.display = "block";
+          return;
+        }
+
+        const icon   = data.is_spam ? "🚫" : "✅";
+        const cls    = data.is_spam ? "spam" : "ham";
+
+        res.innerHTML = `
+          <div class="verdict ${cls}">
+            <span class="verdict-icon">${icon}</span>
+            <div>
+              <div class="verdict-label">Prediction</div>
+              <div class="verdict-text">${data.prediction}</div>
+            </div>
+            <div class="verdict-conf">
+              <div class="conf-num">${data.confidence}%</div>
+              <div class="conf-lbl">Confidence</div>
+            </div>
+          </div>
+
+          <div class="prob-row">
+            <div class="prob-meta">
+              <span>Spam probability</span>
+              <span>${data.spam_prob}%</span>
+            </div>
+            <div class="prob-track">
+              <div class="prob-fill spam" style="width:${data.spam_prob}%"></div>
+            </div>
+          </div>
+
+          <div class="prob-row">
+            <div class="prob-meta">
+              <span>Ham probability</span>
+              <span>${data.ham_prob}%</span>
+            </div>
+            <div class="prob-track">
+              <div class="prob-fill ham" style="width:${data.ham_prob}%"></div>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-label">Spam %</div>
+              <div class="stat-val" style="color:var(--accent-spam)">${data.spam_prob}%</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Ham %</div>
+              <div class="stat-val" style="color:var(--accent-ham)">${data.ham_prob}%</div>
+            </div>
+          </div>
+        `;
+
+        res.style.display = "block";
+
+      } catch (err) {
+        res.innerHTML = `<div class="error-box">❌ Network error: ${err.message}</div>`;
+        res.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = "Analyse Message";
+      }
+    }
+
+    // Allow Enter + Ctrl/Cmd to submit
+    document.getElementById("msgInput").addEventListener("keydown", e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") analyze();
+    });
+  </script>
+
+</body>
+</html>
