@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Day 12 - Credit Card Fraud Detection</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: #1a1d26;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      padding: 24px;
+      max-width: 860px;
+      margin: 0 auto 24px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      color: #aaa;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 8px 10px;
+      background: #12141c;
+      border: 1px solid #2a2d3a;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 0.88rem;
+    }
+
+    .field input:focus {
+      outline: none;
+      border-color: #4a90e2;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 28px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    #predictBtn  { background: #4a90e2; color: #fff; }
+    #predictBtn:hover { background: #357abd; }
+    #clearBtn    { background: #2a2d3a; color: #ccc; }
+    #clearBtn:hover { background: #343848; }
+
+    #result {
+      max-width: 860px;
+      margin: 0 auto;
+      display: none;
+    }
+
+    .result-box {
+      padding: 20px 24px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .result-box.fraud {
+      background: #2d1a1a;
+      border: 1px solid #c0392b;
+    }
+
+    .result-box.legit {
+      background: #1a2d1a;
+      border: 1px solid #27ae60;
+    }
+
+    .result-label {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .result-box.fraud .result-label { color: #e74c3c; }
+    .result-box.legit .result-label { color: #2ecc71; }
+
+    .result-prob {
+      font-size: 0.95rem;
+      color: #aaa;
+    }
+
+    .info-bar {
+      max-width: 860px;
+      margin: 0 auto 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .info-tile {
+      flex: 1;
+      min-width: 160px;
+      background: #1a1d26;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .info-tile .val { font-size: 1.4rem; font-weight: 700; color: #4a90e2; }
+    .info-tile .lbl { font-size: 0.78rem; color: #888; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+  <h1>Credit Card Fraud Detection</h1>
+  <p class="subtitle">Day 12 - 100 Days of ML &amp; AI</p>
+
+  <div class="info-bar">
+    <div class="info-tile"><div class="val">284,807</div><div class="lbl">Total Transactions</div></div>
+    <div class="info-tile"><div class="val">492</div><div class="lbl">Fraud Cases</div></div>
+    <div class="info-tile"><div class="val">0.172%</div><div class="lbl">Fraud Rate</div></div>
+    <div class="info-tile"><div class="val">Random Forest</div><div class="lbl">Model</div></div>
+    <div class="info-tile"><div class="val">0.95+</div><div class="lbl">ROC-AUC</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Transaction Features</h2>
+    <div class="grid" id="featGrid"></div>
+    <div class="btn-row">
+      <button id="predictBtn" onclick="predict()">Predict</button>
+      <button id="clearBtn"   onclick="clearForm()">Clear</button>
+    </div>
+  </div>
+
+  <div id="result">
+    <div class="result-box" id="resultBox">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="result-prob"  id="resultProb"></div>
+    </div>
+  </div>
+
+  <script>
+    const featureCols = {{ feature_cols | tojson }};
+
+    // Build input fields
+    const grid = document.getElementById("featGrid");
+    featureCols.forEach(col => {
+      const div = document.createElement("div");
+      div.className = "field";
+      div.innerHTML = `<label>${col}</label><input type="number" id="inp_${col}" step="any" value="0">`;
+      grid.appendChild(div);
+    });
+
+    function getValues() {
+      const data = {};
+      featureCols.forEach(col => {
+        data[col] = parseFloat(document.getElementById(`inp_${col}`).value) || 0;
+      });
+      return data;
+    }
+
+    function clearForm() {
+      featureCols.forEach(col => {
+        document.getElementById(`inp_${col}`).value = 0;
+      });
+      document.getElementById("result").style.display = "none";
+    }
+
+    async function predict() {
+      const data = getValues();
+      const btn = document.getElementById("predictBtn");
+      btn.textContent = "Predicting...";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        const json = await res.json();
+
+        const box   = document.getElementById("resultBox");
+        const label = document.getElementById("resultLabel");
+        const prob  = document.getElementById("resultProb");
+
+        box.className = "result-box " + (json.prediction === 1 ? "fraud" : "legit");
+        label.textContent = json.label;
+        prob.textContent  = `Fraud Probability: ${json.fraud_probability}%`;
+        document.getElementById("result").style.display = "block";
+      } catch (e) {
+        alert("Error: " + e.message);
+      } finally {
+        btn.textContent = "Predict";
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
